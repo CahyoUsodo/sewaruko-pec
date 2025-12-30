@@ -1,4 +1,4 @@
-import { differenceInMonths, startOfToday, endOfDay, isBefore } from "date-fns";
+import { differenceInMonths, startOfToday, isBefore, startOfDay, isSameDay } from "date-fns";
 
 /**
  * Menghitung sisa waktu sewa dalam bulan
@@ -6,18 +6,40 @@ import { differenceInMonths, startOfToday, endOfDay, isBefore } from "date-fns";
  * @returns String "x Bulan lagi" atau "EXPIRED"
  */
 export function calculateTimeRemaining(endDate: Date): string {
-  const today = startOfToday();
-  const end = endOfDay(new Date(endDate)); // Set ke akhir hari (23:59:59)
+  const today = startOfToday(); // 30 Des 2025 00:00:00
+  const end = startOfDay(new Date(endDate)); // Normalize ke start of day untuk menghindari timezone issues
   
-  // Cek apakah sudah lewat akhir hari endDate
+  // Expired jika endDate < hari ini (bukan <=)
+  // Jadi jika endDate = 31 Des dan hari ini = 30 Des, maka endDate > hari ini = BELUM expired
   if (isBefore(end, today)) {
     return "EXPIRED";
   }
   
+  // Jika endDate sama dengan hari ini, masih valid (belum expired)
+  if (isSameDay(end, today)) {
+    return "Hari ini";
+  }
+  
+  // Hitung bulan tersisa dengan membandingkan endDate dengan today
   const monthsRemaining = differenceInMonths(end, today);
   
-  if (monthsRemaining <= 0) {
+  // Jika monthsRemaining < 0, berarti sudah lewat (seharusnya sudah tertangkap di cek sebelumnya)
+  if (monthsRemaining < 0) {
     return "EXPIRED";
+  }
+  
+  // Jika monthsRemaining = 0, berarti masih di bulan yang sama tapi bukan hari ini
+  // Hitung hari tersisa untuk kasus ini
+  if (monthsRemaining === 0) {
+    const daysRemaining = Math.ceil((end.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    if (daysRemaining <= 0) {
+      return "EXPIRED";
+    }
+    // Jika kurang dari 30 hari, tampilkan dalam hari
+    if (daysRemaining < 30) {
+      return `${daysRemaining} Hari lagi`;
+    }
+    return "1 Bulan lagi";
   }
   
   return `${monthsRemaining} Bulan lagi`;
@@ -30,13 +52,28 @@ export function calculateTimeRemaining(endDate: Date): string {
  */
 export function getTimeRemainingColor(endDate: Date): string {
   const today = startOfToday();
-  const end = endOfDay(new Date(endDate)); // Set ke akhir hari (23:59:59)
+  const end = startOfDay(new Date(endDate));
   
   if (isBefore(end, today)) {
     return "text-red-600 font-bold";
   }
   
   const monthsRemaining = differenceInMonths(end, today);
+  
+  if (monthsRemaining < 0) {
+    return "text-red-600 font-bold";
+  }
+  
+  if (monthsRemaining === 0) {
+    // Jika masih di bulan yang sama, cek hari tersisa
+    const daysRemaining = Math.ceil((end.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    if (daysRemaining < 2) {
+      return "text-red-600 font-bold";
+    }
+    if (daysRemaining < 30) {
+      return "text-red-600 font-bold";
+    }
+  }
   
   if (monthsRemaining < 2) {
     return "text-red-600 font-bold";
@@ -56,8 +93,10 @@ export function getTimeRemainingColor(endDate: Date): string {
  */
 export function isExpired(endDate: Date): boolean {
   const today = startOfToday();
-  const end = endOfDay(new Date(endDate)); // Set ke akhir hari (23:59:59)
-  // Expired jika endDate sudah lewat dari hari ini (setelah akhir hari ini)
+  const end = startOfDay(new Date(endDate)); // Normalize ke start of day
+  // Expired jika endDate < hari ini (bukan <=)
+  // Jadi jika endDate = 31 Des dan hari ini = 30 Des, maka endDate > hari ini = BELUM expired
+  // Jika endDate = hari ini, juga BELUM expired (masih valid sampai akhir hari)
   return isBefore(end, today);
 }
 
