@@ -1,4 +1,4 @@
-import { differenceInMonths, isPast, startOfToday } from "date-fns";
+import { differenceInMonths, startOfToday, endOfDay, isBefore } from "date-fns";
 
 /**
  * Menghitung sisa waktu sewa dalam bulan
@@ -7,9 +7,10 @@ import { differenceInMonths, isPast, startOfToday } from "date-fns";
  */
 export function calculateTimeRemaining(endDate: Date): string {
   const today = startOfToday();
-  const end = new Date(endDate);
+  const end = endOfDay(new Date(endDate)); // Set ke akhir hari (23:59:59)
   
-  if (isPast(end)) {
+  // Cek apakah sudah lewat akhir hari endDate
+  if (isBefore(end, today)) {
     return "EXPIRED";
   }
   
@@ -29,9 +30,9 @@ export function calculateTimeRemaining(endDate: Date): string {
  */
 export function getTimeRemainingColor(endDate: Date): string {
   const today = startOfToday();
-  const end = new Date(endDate);
+  const end = endOfDay(new Date(endDate)); // Set ke akhir hari (23:59:59)
   
-  if (isPast(end)) {
+  if (isBefore(end, today)) {
     return "text-red-600 font-bold";
   }
   
@@ -55,8 +56,9 @@ export function getTimeRemainingColor(endDate: Date): string {
  */
 export function isExpired(endDate: Date): boolean {
   const today = startOfToday();
-  const end = new Date(endDate);
-  return isPast(end);
+  const end = endOfDay(new Date(endDate)); // Set ke akhir hari (23:59:59)
+  // Expired jika endDate sudah lewat dari hari ini (setelah akhir hari ini)
+  return isBefore(end, today);
 }
 
 /**
